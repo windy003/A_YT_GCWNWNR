@@ -22,6 +22,7 @@ import android.widget.Toast;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.inputmethod.InputMethodManager;
+import android.text.TextWatcher;
 
 import androidx.core.app.NotificationCompat;
 
@@ -104,6 +105,9 @@ public class FloatingService extends Service {
         
         // 初始化播放按钮状态
         updatePlayPauseButton();
+        
+        // 设置EditText换行属性
+        setupEditTextWordWrap();
         
         // 暂时禁用自动状态检测，先测试手动切换
         // startPlaybackStatusMonitoring();
@@ -230,6 +234,8 @@ public class FloatingService extends Service {
             if (currentTextSize > 10f) {
                 currentTextSize -= 2f;
                 editNotes.setTextSize(currentTextSize);
+                // 字体大小改变后重新应用换行设置
+                updateTextWrapSettings();
             }
         });
         
@@ -237,6 +243,8 @@ public class FloatingService extends Service {
             if (currentTextSize < 30f) {
                 currentTextSize += 2f;
                 editNotes.setTextSize(currentTextSize);
+                // 字体大小改变后重新应用换行设置
+                updateTextWrapSettings();
             }
         });
         
@@ -266,6 +274,119 @@ public class FloatingService extends Service {
             }
         } else {
             android.util.Log.e("FloatingService", "无障碍服务不可用");
+        }
+    }
+    
+    /**
+     * 设置EditText的自动换行
+     */
+    private void setupEditTextWordWrap() {
+        if (editNotes != null) {
+            // 强制禁用水平滚动
+            editNotes.setHorizontallyScrolling(false);
+            editNotes.setMaxWidth(420); // 增加宽度
+            editNotes.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_SIMPLE);
+            
+            // 强制设置最大EMS（每行字符数）- 调整到更合理的范围
+            editNotes.setMaxEms(25); // 增加每行字符数
+            editNotes.setEms(25);
+            editNotes.setWidth(420); // 增加像素宽度
+            
+            // 设置文本改变监听器，确保换行
+            editNotes.addTextChangedListener(new android.text.TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+                
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    // 强制重新布局以确保换行
+                    editNotes.post(() -> {
+                        editNotes.setHorizontallyScrolling(false);
+                        editNotes.setMaxEms(25);
+                        editNotes.setWidth(420);
+                    });
+                }
+                
+                @Override
+                public void afterTextChanged(android.text.Editable s) {
+                    // 根据当前字体大小动态计算每行字符数限制
+                    int maxCharsPerLine = calculateMaxCharsPerLine();
+                    
+                    String text = s.toString();
+                    String[] lines = text.split("\n");
+                    boolean needsFormatting = false;
+                    
+                    for (String line : lines) {
+                        if (line.length() > maxCharsPerLine) {
+                            needsFormatting = true;
+                            break;
+                        }
+                    }
+                    
+                    if (needsFormatting) {
+                        StringBuilder formattedText = new StringBuilder();
+                        for (String line : lines) {
+                            if (line.length() <= maxCharsPerLine) {
+                                formattedText.append(line).append("\n");
+                            } else {
+                                // 将长行分割成多行
+                                while (line.length() > maxCharsPerLine) {
+                                    formattedText.append(line.substring(0, maxCharsPerLine)).append("\n");
+                                    line = line.substring(maxCharsPerLine);
+                                }
+                                if (line.length() > 0) {
+                                    formattedText.append(line).append("\n");
+                                }
+                            }
+                        }
+                        
+                        // 移除监听器避免无限循环
+                        editNotes.removeTextChangedListener(this);
+                        editNotes.setText(formattedText.toString().trim());
+                        editNotes.setSelection(editNotes.length()); // 光标移到末尾
+                        editNotes.addTextChangedListener(this);
+                    }
+                }
+            });
+        }
+    }
+    
+    /**
+     * 根据当前字体大小动态计算每行最大字符数
+     */
+    private int calculateMaxCharsPerLine() {
+        if (editNotes == null) return 20;
+        
+        // 根据字体大小计算每行字符数
+        // 基准：18sp字体大小对应约28个字符（增加宽度）
+        float baseFontSize = 18f;
+        int baseCharsPerLine = 28;
+        
+        // 动态调整：字体越大，每行字符数越少
+        float ratio = baseFontSize / currentTextSize;
+        int maxChars = (int) (baseCharsPerLine * ratio);
+        
+        // 设置合理的范围：最少18个字符，最多35个字符
+        maxChars = Math.max(18, Math.min(35, maxChars));
+        
+        android.util.Log.d("FloatingService", "字体大小: " + currentTextSize + "sp, 每行最大字符数: " + maxChars);
+        return maxChars;
+    }
+    
+    /**
+     * 更新文本换行设置（字体大小改变后调用）
+     */
+    private void updateTextWrapSettings() {
+        if (editNotes != null) {
+            // 重新计算并应用EMS设置
+            int maxChars = calculateMaxCharsPerLine();
+            int ems = Math.max(15, Math.min(30, maxChars)); // EMS范围15-30
+            
+            editNotes.setMaxEms(ems);
+            editNotes.setEms(ems);
+            
+            android.util.Log.d("FloatingService", "更新EMS设置: " + ems);
         }
     }
     
