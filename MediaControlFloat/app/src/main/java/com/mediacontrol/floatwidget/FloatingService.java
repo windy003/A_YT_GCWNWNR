@@ -23,6 +23,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.inputmethod.InputMethodManager;
 import android.text.TextWatcher;
+import android.media.AudioManager;
+import android.view.KeyEvent;
 
 import androidx.core.app.NotificationCompat;
 
@@ -131,47 +133,34 @@ public class FloatingService extends Service {
             
             android.util.Log.d("FloatingService", "操作前状态 - 焦点: " + hadEditTextFocus + ", 键盘: " + wasKeyboardVisible);
             
-            // 播放/暂停使用root权限发送空格键
+            // 播放/暂停使用媒体按键API
             new Thread(() -> {
                 try {
-                    // 临时清除焦点，确保按键发送到YouTube
+                    // 临时清除焦点，确保媒体按键发送到正确的应用
                     if (hadEditTextFocus) {
                         handler.post(() -> editNotes.clearFocus());
                         Thread.sleep(100); // 短暂等待焦点切换
                     }
                     
-                    // 使用root权限执行input命令
-                    Process suProcess = Runtime.getRuntime().exec("su");
-                    java.io.DataOutputStream os = new java.io.DataOutputStream(suProcess.getOutputStream());
+                    // 使用媒体按键API发送播放/暂停命令
+                    boolean success = sendMediaPlayPauseKey();
                     
-                    // 发送空格键命令
-                    os.writeBytes("input keyevent " + android.view.KeyEvent.KEYCODE_SPACE + "\n");
-                    os.writeBytes("exit\n");
-                    os.flush();
-                    os.close();
-                    
-                    int exitCode = suProcess.waitFor();
-                    
-                    if (exitCode == 0) {
-                        // 在主线程更新UI和恢复状态
-                        handler.post(() -> {
-                            // 直接切换状态，因为我们知道空格键会切换播放/暂停
+                    // 在主线程更新UI和恢复状态
+                    handler.post(() -> {
+                        if (success) {
+                            // 直接切换状态
                             isPlaying = !isPlaying;
                             updatePlayPauseButton();
-                            
-                            // 恢复输入状态
-                            restoreInputState(hadEditTextFocus, wasKeyboardVisible);
-                            
-                            android.util.Log.d("FloatingService", "Root空格键发送成功，播放状态: " + (isPlaying ? "播放中" : "暂停"));
-                        });
-                    } else {
-                        android.util.Log.e("FloatingService", "Root空格键发送失败，退出码: " + exitCode);
+                            android.util.Log.d("FloatingService", "媒体按键发送成功，播放状态: " + (isPlaying ? "播放中" : "暂停"));
+                        } else {
+                            android.util.Log.e("FloatingService", "媒体按键发送失败");
+                        }
                         
-                        // 失败时也要恢复状态
-                        handler.post(() -> restoreInputState(hadEditTextFocus, wasKeyboardVisible));
-                    }
+                        // 恢复输入状态
+                        restoreInputState(hadEditTextFocus, wasKeyboardVisible);
+                    });
                 } catch (Exception e) {
-                    android.util.Log.e("FloatingService", "Root空格键执行异常", e);
+                    android.util.Log.e("FloatingService", "媒体按键执行异常", e);
                     
                     // 异常时也要恢复状态
                     handler.post(() -> restoreInputState(hadEditTextFocus, wasKeyboardVisible));
@@ -270,6 +259,35 @@ public class FloatingService extends Service {
             // 停止服务并关闭悬浮窗
             stopSelf();
         });
+    }
+    
+    /**
+     * 发送媒体播放/暂停按键（无需root权限）
+     */
+    private boolean sendMediaPlayPauseKey() {
+        try {
+            android.util.Log.d("FloatingService", "发送媒体播放/暂停按键");
+            
+            AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            if (audioManager != null) {
+                // 创建播放/暂停按键事件
+                KeyEvent downEvent = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
+                KeyEvent upEvent = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
+                
+                // 发送按键事件
+                audioManager.dispatchMediaKeyEvent(downEvent);
+                audioManager.dispatchMediaKeyEvent(upEvent);
+                
+                android.util.Log.d("FloatingService", "媒体按键事件已发送");
+                return true;
+            } else {
+                android.util.Log.e("FloatingService", "AudioManager为null");
+                return false;
+            }
+        } catch (Exception e) {
+            android.util.Log.e("FloatingService", "发送媒体按键时出错", e);
+            return false;
+        }
     }
     
     /**
