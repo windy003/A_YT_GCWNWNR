@@ -53,6 +53,18 @@
             android:textStyle="bold" />
 
         <Button
+            android:id="@+id/btn_unfocus"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_margin="4dp"
+            android:background="@drawable/button_background"
+            android:text="◇"
+            android:textColor="@android:color/holo_blue_dark"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:contentDescription="取消聚焦" />
+
+        <Button
             android:id="@+id/btn_close"
             android:layout_width="48dp"
             android:layout_height="48dp"

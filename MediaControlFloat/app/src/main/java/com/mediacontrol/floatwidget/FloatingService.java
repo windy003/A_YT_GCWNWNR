@@ -37,6 +37,7 @@ public class FloatingService extends Service {
     private Button fontSmallerBtn;
     private Button fontLargerBtn;
     private Button closeBtn;
+    private Button unfocusBtn;
     private ImageButton playPauseBtn;
     private float currentTextSize = 18f; // 默认字体大小
     private boolean isPlaying = false; // 播放状态，初始为暂停状态（显示播放按钮）
@@ -101,6 +102,7 @@ public class FloatingService extends Service {
         editNotes = floatingView.findViewById(R.id.edit_notes);
         fontSmallerBtn = floatingView.findViewById(R.id.btn_font_smaller);
         fontLargerBtn = floatingView.findViewById(R.id.btn_font_larger);
+        unfocusBtn = floatingView.findViewById(R.id.btn_unfocus);
         closeBtn = floatingView.findViewById(R.id.btn_close);
         
         // 初始化播放按钮状态
@@ -257,11 +259,47 @@ public class FloatingService extends Service {
             }
         });
         
+        // 取消聚焦按钮
+        unfocusBtn.setOnClickListener(v -> {
+            android.util.Log.d("FloatingService", "取消聚焦按钮点击");
+            clearEditTextFocus();
+        });
+        
         // 关闭按钮
         closeBtn.setOnClickListener(v -> {
             // 停止服务并关闭悬浮窗
             stopSelf();
         });
+    }
+    
+    /**
+     * 清除EditText的焦点并隐藏输入法
+     */
+    private void clearEditTextFocus() {
+        try {
+            if (editNotes != null && editNotes.hasFocus()) {
+                android.util.Log.d("FloatingService", "清除EditText焦点");
+                
+                // 清除焦点
+                editNotes.clearFocus();
+                
+                // 隐藏输入法
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.hideSoftInputFromWindow(editNotes.getWindowToken(), 0);
+                }
+                
+                // 设置悬浮窗为不可聚焦，确保后续点击不会重新获得焦点
+                params.flags = params.flags | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+                windowManager.updateViewLayout(floatingView, params);
+                
+                android.util.Log.d("FloatingService", "已清除焦点并隐藏输入法");
+            } else {
+                android.util.Log.d("FloatingService", "EditText没有焦点，无需操作");
+            }
+        } catch (Exception e) {
+            android.util.Log.e("FloatingService", "清除焦点时出错", e);
+        }
     }
     
     /**
