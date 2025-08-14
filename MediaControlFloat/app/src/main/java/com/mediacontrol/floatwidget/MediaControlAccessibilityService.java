@@ -352,7 +352,7 @@ public class MediaControlAccessibilityService extends AccessibilityService {
     }
 
     /**
-     * 执行左侧双击手势（5秒回退）
+     * 执行左上侧双击手势（5秒回退）- 基于实际测试坐标优化
      */
     public boolean performLeftDoubleClick() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -362,12 +362,29 @@ public class MediaControlAccessibilityService extends AccessibilityService {
                     Rect bounds = new Rect();
                     rootNode.getBoundsInScreen(bounds);
                     
-                    // 在屏幕左侧1/3位置执行双击（YouTube的双击回退功能）
-                    int leftX = bounds.left + (bounds.width() / 3);
-                    int centerY = bounds.centerY();
+                    // 基于用户反馈的有效坐标 (96, 445) 进行调整
+                    // 这个位置是YouTube竖屏视频的左侧有效回退区域
+                    int targetX = 96;
+                    int targetY = 445;
                     
-                    Log.d("AccessibilityService", "执行双击手势在位置: (" + leftX + ", " + centerY + ")");
-                    return performDoubleClickAt(leftX, centerY);
+                    // 如果屏幕尺寸差异很大，按比例调整
+                    if (bounds.width() > 0 && bounds.height() > 0) {
+                        // 基于用户屏幕计算比例
+                        float xRatio = 96f / 1080f; // 大约0.089 (靠近左边缘)
+                        float yRatio = 445f / 2340f; // 大约0.19 (上部区域)
+                        
+                        targetX = (int)(bounds.width() * xRatio);
+                        targetY = bounds.top + (int)(bounds.height() * yRatio);
+                        
+                        // 确保不会点到屏幕边缘外
+                        targetX = Math.max(50, Math.min(targetX, bounds.width() - 50));
+                        targetY = Math.max(bounds.top + 100, Math.min(targetY, bounds.height() - 100));
+                    }
+                    
+                    Log.d("AccessibilityService", "优化后双击位置: (" + targetX + ", " + targetY + ")");
+                    Log.d("AccessibilityService", "屏幕范围: " + bounds.toString());
+                    Log.d("AccessibilityService", "基准坐标: (96, 445)");
+                    return performDoubleClickAt(targetX, targetY);
                 }
             } catch (Exception e) {
                 Log.e("AccessibilityService", "双击手势执行失败", e);
@@ -377,7 +394,7 @@ public class MediaControlAccessibilityService extends AccessibilityService {
     }
     
     /**
-     * 在指定位置执行双击手势
+     * 在指定位置执行双击手势（针对YouTube优化）
      */
     private boolean performDoubleClickAt(int x, int y) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -386,19 +403,20 @@ public class MediaControlAccessibilityService extends AccessibilityService {
                 Path clickPath = new Path();
                 clickPath.moveTo(x, y);
                 
-                // 第一次点击
+                // 第一次点击（持续时间50ms）
                 GestureDescription.StrokeDescription firstClick = 
-                    new GestureDescription.StrokeDescription(clickPath, 0, 100);
+                    new GestureDescription.StrokeDescription(clickPath, 0, 50);
                 
-                // 第二次点击（间隔300ms）
+                // 第二次点击（间隔200ms，YouTube双击识别的最佳间隔）
                 GestureDescription.StrokeDescription secondClick = 
-                    new GestureDescription.StrokeDescription(clickPath, 300, 100);
+                    new GestureDescription.StrokeDescription(clickPath, 200, 50);
                 
                 GestureDescription gestureDescription = new GestureDescription.Builder()
                     .addStroke(firstClick)
                     .addStroke(secondClick)
                     .build();
                 
+                Log.d("AccessibilityService", "发送双击手势，间隔200ms");
                 return dispatchGesture(gestureDescription, null, null);
             } catch (Exception e) {
                 Log.e("AccessibilityService", "执行双击手势时发生错误", e);

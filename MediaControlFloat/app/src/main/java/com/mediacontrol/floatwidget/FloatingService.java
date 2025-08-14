@@ -128,13 +128,13 @@ public class FloatingService extends Service {
             params.flags = params.flags | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
             windowManager.updateViewLayout(floatingView, params);
             
-            // 在后台线程发送按键
+            // 在后台线程发送5秒回退指令
             new Thread(() -> {
                 try {
                     // 短暂延迟确保焦点切换完成
                     Thread.sleep(150);
-                    // 发送按键到YouTube
-                    youTubeWindowManager.sendLeftArrowToYouTube();
+                    // 执行5秒回退
+                    perform5SecondRewind();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -184,6 +184,27 @@ public class FloatingService extends Service {
             // 停止服务并关闭悬浮窗
             stopSelf();
         });
+    }
+    
+    /**
+     * 执行5秒回退操作
+     */
+    private void perform5SecondRewind() {
+        android.util.Log.d("FloatingService", "执行5秒回退");
+        
+        // 优先使用双击手势（YouTube标准的5秒回退）
+        MediaControlAccessibilityService accessibilityService = 
+            MediaControlAccessibilityService.getInstance();
+        if (accessibilityService != null && accessibilityService.isYouTubeInForeground()) {
+            if (accessibilityService.performLeftDoubleClick()) {
+                android.util.Log.d("FloatingService", "5秒回退：双击手势成功");
+                return;
+            }
+        }
+        
+        // 备用方案：使用左方向键（虽然是10秒，但至少能回退）
+        android.util.Log.d("FloatingService", "双击手势失败，使用左方向键备用方案");
+        youTubeWindowManager.sendLeftArrowToYouTube();
     }
     
     /**
