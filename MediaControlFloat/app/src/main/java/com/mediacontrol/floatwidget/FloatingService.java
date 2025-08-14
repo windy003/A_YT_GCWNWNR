@@ -109,9 +109,17 @@ public class FloatingService extends Service {
         // 设置EditText换行属性
         setupEditTextWordWrap();
         
-        // 暂时禁用自动状态检测，先测试手动切换
+        // 暂时禁用自动状态检测，使用手动切换更可靠
         // startPlaybackStatusMonitoring();
 
+        // 添加长按功能来手动同步状态
+        playPauseBtn.setOnLongClickListener(v -> {
+            android.util.Log.d("FloatingService", "播放/暂停按钮长按 - 手动同步状态");
+            checkPlaybackStatus();
+            Toast.makeText(this, "已同步播放状态", Toast.LENGTH_SHORT).show();
+            return true;
+        });
+        
         playPauseBtn.setOnClickListener(v -> {
             android.util.Log.d("FloatingService", "播放/暂停按钮点击");
             
@@ -145,6 +153,7 @@ public class FloatingService extends Service {
                     if (exitCode == 0) {
                         // 在主线程更新UI和恢复状态
                         handler.post(() -> {
+                            // 直接切换状态，因为我们知道空格键会切换播放/暂停
                             isPlaying = !isPlaying;
                             updatePlayPauseButton();
                             
