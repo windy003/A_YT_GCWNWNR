@@ -406,4 +406,84 @@ public class MediaControlAccessibilityService extends AccessibilityService {
         }
         return false;
     }
+    
+    /**
+     * 检测YouTube是否正在播放
+     */
+    public boolean isYouTubePlaying() {
+        try {
+            AccessibilityNodeInfo rootNode = getRootInActiveWindow();
+            if (rootNode != null) {
+                String packageName = rootNode.getPackageName() != null ? 
+                    rootNode.getPackageName().toString() : "";
+                
+                // 确认当前是YouTube应用
+                if (YOUTUBE_PACKAGE.equals(packageName) || YOUTUBE_MUSIC_PACKAGE.equals(packageName)) {
+                    // 查找播放/暂停按钮来判断状态
+                    // 注意：如果界面显示"播放"按钮，说明当前是暂停状态
+                    // 如果界面显示"暂停"按钮，说明当前正在播放
+                    AccessibilityNodeInfo playButton = findNodeByContentDescription(rootNode, "播放");
+                    AccessibilityNodeInfo pauseButton = findNodeByContentDescription(rootNode, "暂停");
+                    
+                    // 如果找到"暂停"按钮，说明正在播放中
+                    if (pauseButton != null) {
+                        Log.d("AccessibilityService", "找到暂停按钮，正在播放");
+                        return true;
+                    }
+                    // 如果找到"播放"按钮，说明当前已暂停
+                    if (playButton != null) {
+                        Log.d("AccessibilityService", "找到播放按钮，已暂停");
+                        return false;
+                    }
+                    
+                    // 备用方案：查找英文描述
+                    AccessibilityNodeInfo playButtonEn = findNodeByContentDescription(rootNode, "Play");
+                    AccessibilityNodeInfo pauseButtonEn = findNodeByContentDescription(rootNode, "Pause");
+                    
+                    if (pauseButtonEn != null) {
+                        Log.d("AccessibilityService", "找到Pause按钮，正在播放");
+                        return true;
+                    }
+                    if (playButtonEn != null) {
+                        Log.d("AccessibilityService", "找到Play按钮，已暂停");
+                        return false;
+                    }
+                    
+                    // 默认假设已暂停（更保守的方案）
+                    Log.d("AccessibilityService", "未找到播放/暂停按钮，默认为暂停状态");
+                    return false;
+                }
+            }
+        } catch (Exception e) {
+            Log.e("AccessibilityService", "检测播放状态时出错", e);
+        }
+        
+        // 默认返回false（暂停状态）
+        return false;
+    }
+    
+    /**
+     * 根据内容描述查找节点
+     */
+    private AccessibilityNodeInfo findNodeByContentDescription(AccessibilityNodeInfo node, String description) {
+        if (node == null || description == null) return null;
+        
+        CharSequence contentDesc = node.getContentDescription();
+        if (contentDesc != null && contentDesc.toString().contains(description)) {
+            return node;
+        }
+        
+        // 递归查找子节点
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo child = node.getChild(i);
+            if (child != null) {
+                AccessibilityNodeInfo found = findNodeByContentDescription(child, description);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        
+        return null;
+    }
 }

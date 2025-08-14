@@ -19,6 +19,8 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.Toast;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.core.app.NotificationCompat;
 
@@ -35,7 +37,11 @@ public class FloatingService extends Service {
     private Button fontSmallerBtn;
     private Button fontLargerBtn;
     private Button closeBtn;
+    private ImageButton playPauseBtn;
     private float currentTextSize = 18f; // 默认字体大小
+    private boolean isPlaying = false; // 播放状态，初始为暂停状态（显示播放按钮）
+    private Handler handler = new Handler(Looper.getMainLooper());
+    private Runnable playbackStatusChecker;
 
     @Override
     public void onCreate() {
@@ -92,16 +98,26 @@ public class FloatingService extends Service {
     }
 
     private void setupButtons() {
-        ImageButton playPauseBtn = floatingView.findViewById(R.id.btn_play_pause);
+        playPauseBtn = floatingView.findViewById(R.id.btn_play_pause);
         ImageButton rewindBtn = floatingView.findViewById(R.id.btn_rewind);
         editNotes = floatingView.findViewById(R.id.edit_notes);
         fontSmallerBtn = floatingView.findViewById(R.id.btn_font_smaller);
         fontLargerBtn = floatingView.findViewById(R.id.btn_font_larger);
         closeBtn = floatingView.findViewById(R.id.btn_close);
+        
+        // 初始化播放按钮状态
+        updatePlayPauseButton();
+        
+        // 暂时禁用自动状态检测，先测试手动切换
+        // startPlaybackStatusMonitoring();
 
         playPauseBtn.setOnClickListener(v -> {
             // 播放/暂停使用标准媒体键，通常不需要特殊处理
             mediaKeySimulator.sendPlayPause();
+            // 切换播放状态
+            isPlaying = !isPlaying;
+            android.util.Log.d("FloatingService", "按钮点击，播放状态切换为: " + (isPlaying ? "播放中" : "暂停"));
+            updatePlayPauseButton();
         });
         
         rewindBtn.setOnClickListener(v -> {
@@ -168,6 +184,68 @@ public class FloatingService extends Service {
             // 停止服务并关闭悬浮窗
             stopSelf();
         });
+    }
+    
+    /**
+     * 更新播放/暂停按钮的图标状态
+     * 如果正在播放，显示暂停图标（点击可暂停）
+     * 如果已暂停，显示播放图标（点击可播放）
+     */
+    private void updatePlayPauseButton() {
+        if (playPauseBtn != null) {
+            if (isPlaying) {
+                // 正在播放时，显示暂停图标
+                playPauseBtn.setImageResource(R.drawable.ic_pause);
+                playPauseBtn.setContentDescription("暂停");
+                android.util.Log.d("FloatingService", "更新按钮图标为：暂停图标（当前播放中）");
+            } else {
+                // 已暂停时，显示播放图标
+                playPauseBtn.setImageResource(R.drawable.ic_play);
+                playPauseBtn.setContentDescription("播放");
+                android.util.Log.d("FloatingService", "更新按钮图标为：播放图标（当前暂停）");
+            }
+        }
+    }
+    
+    /**
+     * 启动播放状态监控
+     */
+    private void startPlaybackStatusMonitoring() {
+        playbackStatusChecker = new Runnable() {
+            @Override
+            public void run() {
+                checkPlaybackStatus();
+                handler.postDelayed(this, 2000); // 每2秒检查一次
+            }
+        };
+        handler.post(playbackStatusChecker);
+    }
+    
+    /**
+     * 检查当前播放状态
+     */
+    private void checkPlaybackStatus() {
+        if (youTubeWindowManager != null && youTubeWindowManager.isYouTubeInForeground()) {
+            // 通过无障碍服务检测播放状态
+            MediaControlAccessibilityService accessibilityService = 
+                MediaControlAccessibilityService.getInstance();
+            if (accessibilityService != null) {
+                boolean currentPlayingState = accessibilityService.isYouTubePlaying();
+                if (currentPlayingState != isPlaying) {
+                    isPlaying = currentPlayingState;
+                    updatePlayPauseButton();
+                }
+            }
+        }
+    }
+    
+    /**
+     * 停止播放状态监控
+     */
+    private void stopPlaybackStatusMonitoring() {
+        if (handler != null && playbackStatusChecker != null) {
+            handler.removeCallbacks(playbackStatusChecker);
+        }
     }
 
     private void setupDragListener() {
@@ -238,6 +316,7 @@ public class FloatingService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        stopPlaybackStatusMonitoring();
         if (floatingView != null) {
             windowManager.removeView(floatingView);
         }
