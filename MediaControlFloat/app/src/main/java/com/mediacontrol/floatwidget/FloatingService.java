@@ -29,8 +29,6 @@ public class FloatingService extends Service {
     private WindowManager windowManager;
     private View floatingView;
     private WindowManager.LayoutParams params;
-    private MediaKeySimulator mediaKeySimulator;
-    private YouTubeWindowManager youTubeWindowManager;
     
     // UI 组件
     private EditText editNotes;
@@ -47,8 +45,6 @@ public class FloatingService extends Service {
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
-        mediaKeySimulator = new MediaKeySimulator(this);
-        youTubeWindowManager = new YouTubeWindowManager(this);
     }
 
     @Override
@@ -112,12 +108,63 @@ public class FloatingService extends Service {
         // startPlaybackStatusMonitoring();
 
         playPauseBtn.setOnClickListener(v -> {
-            // 播放/暂停使用标准媒体键，通常不需要特殊处理
-            mediaKeySimulator.sendPlayPause();
-            // 切换播放状态
-            isPlaying = !isPlaying;
-            android.util.Log.d("FloatingService", "按钮点击，播放状态切换为: " + (isPlaying ? "播放中" : "暂停"));
-            updatePlayPauseButton();
+            android.util.Log.d("FloatingService", "播放/暂停按钮点击");
+            
+            // 保存当前窗口状态
+            boolean hadEditTextFocus = editNotes.hasFocus();
+            int originalFlags = params.flags;
+            
+            // 播放/暂停使用root权限发送空格键
+            new Thread(() -> {
+                try {
+                    // 临时清除焦点，确保按键发送到YouTube
+                    if (hadEditTextFocus) {
+                        handler.post(() -> editNotes.clearFocus());
+                        Thread.sleep(100); // 短暂等待焦点切换
+                    }
+                    
+                    // 使用root权限执行input命令
+                    Process suProcess = Runtime.getRuntime().exec("su");
+                    java.io.DataOutputStream os = new java.io.DataOutputStream(suProcess.getOutputStream());
+                    
+                    // 发送空格键命令
+                    os.writeBytes("input keyevent " + android.view.KeyEvent.KEYCODE_SPACE + "\n");
+                    os.writeBytes("exit\n");
+                    os.flush();
+                    os.close();
+                    
+                    int exitCode = suProcess.waitFor();
+                    
+                    if (exitCode == 0) {
+                        // 在主线程更新UI和恢复状态
+                        handler.post(() -> {
+                            isPlaying = !isPlaying;
+                            updatePlayPauseButton();
+                            
+                            // 恢复EditText焦点状态
+                            if (hadEditTextFocus) {
+                                editNotes.requestFocus();
+                            }
+                            
+                            android.util.Log.d("FloatingService", "Root空格键发送成功，播放状态: " + (isPlaying ? "播放中" : "暂停"));
+                        });
+                    } else {
+                        android.util.Log.e("FloatingService", "Root空格键发送失败，退出码: " + exitCode);
+                        
+                        // 失败时也要恢复焦点
+                        if (hadEditTextFocus) {
+                            handler.post(() -> editNotes.requestFocus());
+                        }
+                    }
+                } catch (Exception e) {
+                    android.util.Log.e("FloatingService", "Root空格键执行异常", e);
+                    
+                    // 异常时也要恢复焦点
+                    if (hadEditTextFocus) {
+                        handler.post(() -> editNotes.requestFocus());
+                    }
+                }
+            }).start();
         });
         
         rewindBtn.setOnClickListener(v -> {
@@ -187,24 +234,25 @@ public class FloatingService extends Service {
     }
     
     /**
-     * 执行5秒回退操作
+     * 执行5秒回退操作（仅使用无障碍服务手势）
      */
     private void perform5SecondRewind() {
-        android.util.Log.d("FloatingService", "执行5秒回退");
+        android.util.Log.d("FloatingService", "执行5秒回退（无障碍手势模式）");
         
-        // 优先使用双击手势（YouTube标准的5秒回退）
+        // 使用双击手势（YouTube标准的5秒回退）
         MediaControlAccessibilityService accessibilityService = 
             MediaControlAccessibilityService.getInstance();
-        if (accessibilityService != null && accessibilityService.isYouTubeInForeground()) {
-            if (accessibilityService.performLeftDoubleClick()) {
-                android.util.Log.d("FloatingService", "5秒回退：双击手势成功");
-                return;
-            }
-        }
         
-        // 备用方案：使用左方向键（虽然是10秒，但至少能回退）
-        android.util.Log.d("FloatingService", "双击手势失败，使用左方向键备用方案");
-        youTubeWindowManager.sendLeftArrowToYouTube();
+        if (accessibilityService != null) {
+            boolean success = accessibilityService.performLeftDoubleClick();
+            if (success) {
+                android.util.Log.d("FloatingService", "5秒回退：双击手势成功");
+            } else {
+                android.util.Log.d("FloatingService", "5秒回退：双击手势执行失败");
+            }
+        } else {
+            android.util.Log.e("FloatingService", "无障碍服务不可用");
+        }
     }
     
     /**
@@ -246,16 +294,14 @@ public class FloatingService extends Service {
      * 检查当前播放状态
      */
     private void checkPlaybackStatus() {
-        if (youTubeWindowManager != null && youTubeWindowManager.isYouTubeInForeground()) {
-            // 通过无障碍服务检测播放状态
-            MediaControlAccessibilityService accessibilityService = 
-                MediaControlAccessibilityService.getInstance();
-            if (accessibilityService != null) {
-                boolean currentPlayingState = accessibilityService.isYouTubePlaying();
-                if (currentPlayingState != isPlaying) {
-                    isPlaying = currentPlayingState;
-                    updatePlayPauseButton();
-                }
+        // 通过无障碍服务检测播放状态
+        MediaControlAccessibilityService accessibilityService = 
+            MediaControlAccessibilityService.getInstance();
+        if (accessibilityService != null && accessibilityService.isYouTubeInForeground()) {
+            boolean currentPlayingState = accessibilityService.isYouTubePlaying();
+            if (currentPlayingState != isPlaying) {
+                isPlaying = currentPlayingState;
+                updatePlayPauseButton();
             }
         }
     }

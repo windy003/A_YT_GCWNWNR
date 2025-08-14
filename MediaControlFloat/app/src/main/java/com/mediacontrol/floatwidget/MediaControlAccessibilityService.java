@@ -352,38 +352,52 @@ public class MediaControlAccessibilityService extends AccessibilityService {
     }
 
     /**
-     * 执行左上侧双击手势（5秒回退）- 基于实际测试坐标优化
+     * 执行左上侧双击手势（5秒回退）- 安全版本
      */
     public boolean performLeftDoubleClick() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             try {
+                // 首先检查YouTube是否在前台
+                if (!isYouTubeInForeground()) {
+                    Log.w("AccessibilityService", "YouTube不在前台，跳过双击回退操作");
+                    return false;
+                }
+                
                 AccessibilityNodeInfo rootNode = getRootInActiveWindow();
                 if (rootNode != null) {
+                    String packageName = rootNode.getPackageName() != null ? 
+                        rootNode.getPackageName().toString() : "";
+                    
+                    // 再次确认是YouTube应用
+                    if (!YOUTUBE_PACKAGE.equals(packageName) && !YOUTUBE_MUSIC_PACKAGE.equals(packageName)) {
+                        Log.w("AccessibilityService", "当前应用不是YouTube: " + packageName);
+                        return false;
+                    }
+                    
                     Rect bounds = new Rect();
                     rootNode.getBoundsInScreen(bounds);
                     
                     // 基于用户反馈的有效坐标 (96, 445) 进行调整
-                    // 这个位置是YouTube竖屏视频的左侧有效回退区域
                     int targetX = 96;
                     int targetY = 445;
                     
-                    // 如果屏幕尺寸差异很大，按比例调整
+                    // 按比例调整适配不同屏幕
                     if (bounds.width() > 0 && bounds.height() > 0) {
-                        // 基于用户屏幕计算比例
-                        float xRatio = 96f / 1080f; // 大约0.089 (靠近左边缘)
-                        float yRatio = 445f / 2340f; // 大约0.19 (上部区域)
+                        float xRatio = 96f / 1080f; // 约8.9%
+                        float yRatio = 445f / 2340f; // 约19%
                         
                         targetX = (int)(bounds.width() * xRatio);
                         targetY = bounds.top + (int)(bounds.height() * yRatio);
                         
-                        // 确保不会点到屏幕边缘外
-                        targetX = Math.max(50, Math.min(targetX, bounds.width() - 50));
-                        targetY = Math.max(bounds.top + 100, Math.min(targetY, bounds.height() - 100));
+                        // 安全边界检查，避免点击系统区域
+                        targetX = Math.max(80, Math.min(targetX, bounds.width() / 3));
+                        targetY = Math.max(bounds.top + 200, Math.min(targetY, bounds.height() / 2));
                     }
                     
-                    Log.d("AccessibilityService", "优化后双击位置: (" + targetX + ", " + targetY + ")");
+                    Log.d("AccessibilityService", "安全双击位置: (" + targetX + ", " + targetY + ")");
                     Log.d("AccessibilityService", "屏幕范围: " + bounds.toString());
-                    Log.d("AccessibilityService", "基准坐标: (96, 445)");
+                    Log.d("AccessibilityService", "目标应用: " + packageName);
+                    
                     return performDoubleClickAt(targetX, targetY);
                 }
             } catch (Exception e) {
@@ -420,6 +434,98 @@ public class MediaControlAccessibilityService extends AccessibilityService {
                 return dispatchGesture(gestureDescription, null, null);
             } catch (Exception e) {
                 Log.e("AccessibilityService", "执行双击手势时发生错误", e);
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 执行播放/暂停点击手势 - 安全版本
+     */
+    public boolean performPlayPauseClick() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                // 首先检查YouTube是否在前台
+                if (!isYouTubeInForeground()) {
+                    Log.w("AccessibilityService", "YouTube不在前台，跳过播放/暂停操作");
+                    return false;
+                }
+                
+                AccessibilityNodeInfo rootNode = getRootInActiveWindow();
+                if (rootNode != null) {
+                    String packageName = rootNode.getPackageName() != null ? 
+                        rootNode.getPackageName().toString() : "";
+                    
+                    // 再次确认是YouTube应用
+                    if (!YOUTUBE_PACKAGE.equals(packageName) && !YOUTUBE_MUSIC_PACKAGE.equals(packageName)) {
+                        Log.w("AccessibilityService", "当前应用不是YouTube: " + packageName);
+                        return false;
+                    }
+                    
+                    Rect bounds = new Rect();
+                    rootNode.getBoundsInScreen(bounds);
+                    
+                    // YouTube播放/暂停区域在视频中央，更保守的位置
+                    int centerX = bounds.centerX();
+                    int centerY = bounds.centerY(); // 改为正中央，更安全
+                    
+                    Log.d("AccessibilityService", "播放/暂停安全点击位置: (" + centerX + ", " + centerY + ")");
+                    Log.d("AccessibilityService", "目标应用: " + packageName);
+                    
+                    return performSingleClickAt(centerX, centerY);
+                }
+            } catch (Exception e) {
+                Log.e("AccessibilityService", "播放/暂停手势执行失败", e);
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 在指定位置执行单击手势 - 安全版本
+     */
+    private boolean performSingleClickAt(int x, int y) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                // 添加延迟，避免过快的手势操作
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return false;
+                }
+                
+                Path clickPath = new Path();
+                clickPath.moveTo(x, y);
+                
+                // 缩短点击时间，减少对系统的影响
+                GestureDescription.StrokeDescription clickStroke = 
+                    new GestureDescription.StrokeDescription(clickPath, 0, 50);
+                
+                GestureDescription gestureDescription = new GestureDescription.Builder()
+                    .addStroke(clickStroke)
+                    .build();
+                
+                Log.d("AccessibilityService", "发送安全单击手势");
+                
+                // 使用回调来监控手势执行结果
+                final boolean[] result = {false};
+                GestureResultCallback callback = new GestureResultCallback() {
+                    @Override
+                    public void onCompleted(GestureDescription gestureDescription) {
+                        Log.d("AccessibilityService", "单击手势执行完成");
+                        result[0] = true;
+                    }
+                    
+                    @Override
+                    public void onCancelled(GestureDescription gestureDescription) {
+                        Log.w("AccessibilityService", "单击手势被取消");
+                    }
+                };
+                
+                return dispatchGesture(gestureDescription, callback, null);
+            } catch (Exception e) {
+                Log.e("AccessibilityService", "执行单击手势时发生错误", e);
             }
         }
         return false;
