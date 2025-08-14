@@ -46,7 +46,7 @@
 
         <service
             android:name=".FloatingWidgetTileService"
-            android:icon="@drawable/r"
+            android:icon="@drawable/nr"
             android:label="悬浮窗"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">

@@ -112,12 +112,12 @@ public class FloatingWidgetTileService extends TileService {
             boolean isServiceRunning = isFloatingServiceRunning();
             
             if (isServiceRunning) {
-                tile.setIcon(Icon.createWithResource(this, R.drawable.r));
+                tile.setIcon(Icon.createWithResource(this, R.drawable.nr));
                 tile.setLabel("悬浮窗");
                 tile.setContentDescription("点击关闭悬浮窗");
                 tile.setState(Tile.STATE_ACTIVE);
             } else {
-                tile.setIcon(Icon.createWithResource(this, R.drawable.r));
+                tile.setIcon(Icon.createWithResource(this, R.drawable.nr));
                 tile.setLabel("悬浮窗");
                 tile.setContentDescription("点击开启悬浮窗");
                 tile.setState(Tile.STATE_INACTIVE);
