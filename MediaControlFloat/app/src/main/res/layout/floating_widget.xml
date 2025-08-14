@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/floating_background"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <!-- 控制按钮行 -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/btn_play_pause"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_margin="4dp"
+            android:background="@drawable/button_background"
+            android:contentDescription="@string/play_pause"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_play_pause" />
+
+        <ImageButton
+            android:id="@+id/btn_rewind"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_margin="4dp"
+            android:background="@drawable/button_background"
+            android:contentDescription="@string/rewind_5s"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_rewind" />
+
+    </LinearLayout>
+
+    <!-- 简单的文本输入框 -->
+    <EditText
+        android:id="@+id/edit_notes"
+        android:layout_width="250dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="8dp"
+        android:background="@android:color/white"
+        android:padding="8dp"
+        android:gravity="top"
+        android:hint="记录笔记..."
+        android:textSize="12sp"
+        android:maxLines="4"
+        android:scrollbars="vertical"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:inputType="textMultiLine" />
+
+</LinearLayout>

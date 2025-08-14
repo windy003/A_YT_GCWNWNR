@@ -1,0 +1,42 @@
+[
+    {
+        "merged": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-merged_res-29:\\drawable_ic_rewind.xml.flat",
+        "source": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-main-31:\\drawable\\ic_rewind.xml"
+    },
+    {
+        "merged": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-merged_res-29:\\drawable_ic_play_pause.xml.flat",
+        "source": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-main-31:\\drawable\\ic_play_pause.xml"
+    },
+    {
+        "merged": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-merged_res-29:\\drawable_ic_launcher_foreground.xml.flat",
+        "source": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-main-31:\\drawable\\ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-merged_res-29:\\mipmap-hdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-main-31:\\mipmap-hdpi\\ic_launcher.png"
+    },
+    {
+        "merged": "com.mediacontrol.floatwidget.app-merged_res-29:/layout_floating_widget.xml.flat",
+        "source": "com.mediacontrol.floatwidget.app-main-31:/layout/floating_widget.xml"
+    },
+    {
+        "merged": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-merged_res-29:\\drawable_button_background.xml.flat",
+        "source": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-main-31:\\drawable\\button_background.xml"
+    },
+    {
+        "merged": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-merged_res-29:\\layout_activity_main.xml.flat",
+        "source": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-main-31:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-merged_res-29:\\layout_floating_widget.xml.flat",
+        "source": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-main-31:\\layout\\floating_widget.xml"
+    },
+    {
+        "merged": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-merged_res-29:\\xml_accessibility_service_config.xml.flat",
+        "source": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-main-31:\\xml\\accessibility_service_config.xml"
+    },
+    {
+        "merged": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-merged_res-29:\\drawable_floating_background.xml.flat",
+        "source": "C:\\Users\\92892\\.gradle\\daemon\\7.5\\com.mediacontrol.floatwidget.app-main-31:\\drawable\\floating_background.xml"
+    }
+]

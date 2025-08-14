@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">媒体控制悬浮窗</string>
+    <string name="permission_required">需要悬浮窗权限</string>
+    <string name="grant_permission">授予权限</string>
+    <string name="play_pause">播放/暂停</string>
+    <string name="rewind_5s">后退5秒 (左方向键)</string>
+    <string name="floating_service_notification">悬浮窗服务运行中</string>
+    <string name="accessibility_service_description">媒体控制悬浮窗需要无障碍权限来向YouTube发送按键指令</string>
+</resources>
