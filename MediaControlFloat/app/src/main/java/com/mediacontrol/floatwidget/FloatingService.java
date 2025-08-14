@@ -21,6 +21,7 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.inputmethod.InputMethodManager;
 
 import androidx.core.app.NotificationCompat;
 
@@ -110,9 +111,11 @@ public class FloatingService extends Service {
         playPauseBtn.setOnClickListener(v -> {
             android.util.Log.d("FloatingService", "播放/暂停按钮点击");
             
-            // 保存当前窗口状态
+            // 保存当前输入状态
             boolean hadEditTextFocus = editNotes.hasFocus();
-            int originalFlags = params.flags;
+            boolean wasKeyboardVisible = isKeyboardVisible();
+            
+            android.util.Log.d("FloatingService", "操作前状态 - 焦点: " + hadEditTextFocus + ", 键盘: " + wasKeyboardVisible);
             
             // 播放/暂停使用root权限发送空格键
             new Thread(() -> {
@@ -141,34 +144,36 @@ public class FloatingService extends Service {
                             isPlaying = !isPlaying;
                             updatePlayPauseButton();
                             
-                            // 恢复EditText焦点状态
-                            if (hadEditTextFocus) {
-                                editNotes.requestFocus();
-                            }
+                            // 恢复输入状态
+                            restoreInputState(hadEditTextFocus, wasKeyboardVisible);
                             
                             android.util.Log.d("FloatingService", "Root空格键发送成功，播放状态: " + (isPlaying ? "播放中" : "暂停"));
                         });
                     } else {
                         android.util.Log.e("FloatingService", "Root空格键发送失败，退出码: " + exitCode);
                         
-                        // 失败时也要恢复焦点
-                        if (hadEditTextFocus) {
-                            handler.post(() -> editNotes.requestFocus());
-                        }
+                        // 失败时也要恢复状态
+                        handler.post(() -> restoreInputState(hadEditTextFocus, wasKeyboardVisible));
                     }
                 } catch (Exception e) {
                     android.util.Log.e("FloatingService", "Root空格键执行异常", e);
                     
-                    // 异常时也要恢复焦点
-                    if (hadEditTextFocus) {
-                        handler.post(() -> editNotes.requestFocus());
-                    }
+                    // 异常时也要恢复状态
+                    handler.post(() -> restoreInputState(hadEditTextFocus, wasKeyboardVisible));
                 }
             }).start();
         });
         
         rewindBtn.setOnClickListener(v -> {
-            // 先清除EditText焦点，让YouTube获得焦点
+            android.util.Log.d("FloatingService", "回退按钮点击");
+            
+            // 保存当前输入状态
+            boolean hadEditTextFocus = editNotes.hasFocus();
+            boolean wasKeyboardVisible = isKeyboardVisible();
+            
+            android.util.Log.d("FloatingService", "回退前状态 - 焦点: " + hadEditTextFocus + ", 键盘: " + wasKeyboardVisible);
+            
+            // 临时清除焦点，让YouTube获得焦点
             editNotes.clearFocus();
             
             // 临时设置悬浮窗为不可聚焦，让YouTube获得系统焦点
@@ -182,8 +187,17 @@ public class FloatingService extends Service {
                     Thread.sleep(150);
                     // 执行5秒回退
                     perform5SecondRewind();
+                    
+                    // 延迟后恢复输入状态
+                    Thread.sleep(200);
+                    handler.post(() -> {
+                        restoreInputState(hadEditTextFocus, wasKeyboardVisible);
+                        android.util.Log.d("FloatingService", "回退操作完成，输入状态已恢复");
+                    });
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                    // 异常时也要恢复状态
+                    handler.post(() -> restoreInputState(hadEditTextFocus, wasKeyboardVisible));
                 }
             }).start();
         });
@@ -252,6 +266,57 @@ public class FloatingService extends Service {
             }
         } else {
             android.util.Log.e("FloatingService", "无障碍服务不可用");
+        }
+    }
+    
+    /**
+     * 检查键盘是否可见
+     */
+    private boolean isKeyboardVisible() {
+        try {
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null && editNotes != null) {
+                return imm.isActive(editNotes);
+            }
+        } catch (Exception e) {
+            android.util.Log.e("FloatingService", "检查键盘状态时出错", e);
+        }
+        return false;
+    }
+    
+    /**
+     * 恢复输入状态（焦点和键盘显示）
+     */
+    private void restoreInputState(boolean hadFocus, boolean wasKeyboardVisible) {
+        try {
+            android.util.Log.d("FloatingService", "恢复输入状态 - 焦点: " + hadFocus + ", 键盘: " + wasKeyboardVisible);
+            
+            if (hadFocus && editNotes != null) {
+                // 恢复焦点
+                editNotes.requestFocus();
+                
+                // 如果之前键盘是可见的，则显示键盘
+                if (wasKeyboardVisible) {
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) {
+                        // 延迟显示键盘，确保焦点已设置
+                        handler.postDelayed(() -> {
+                            imm.showSoftInput(editNotes, InputMethodManager.SHOW_IMPLICIT);
+                        }, 100);
+                    }
+                }
+            }
+            
+            // 恢复悬浮窗的可聚焦属性
+            if (hadFocus) {
+                params.flags = params.flags & ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+            } else {
+                params.flags = params.flags | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+            }
+            windowManager.updateViewLayout(floatingView, params);
+            
+        } catch (Exception e) {
+            android.util.Log.e("FloatingService", "恢复输入状态时出错", e);
         }
     }
     
