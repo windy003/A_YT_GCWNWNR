@@ -34,6 +34,7 @@ public class FloatingService extends Service {
     private EditText editNotes;
     private Button fontSmallerBtn;
     private Button fontLargerBtn;
+    private Button closeBtn;
     private float currentTextSize = 18f; // 默认字体大小
 
     @Override
@@ -96,6 +97,7 @@ public class FloatingService extends Service {
         editNotes = floatingView.findViewById(R.id.edit_notes);
         fontSmallerBtn = floatingView.findViewById(R.id.btn_font_smaller);
         fontLargerBtn = floatingView.findViewById(R.id.btn_font_larger);
+        closeBtn = floatingView.findViewById(R.id.btn_close);
 
         playPauseBtn.setOnClickListener(v -> {
             // 播放/暂停使用标准媒体键，通常不需要特殊处理
@@ -159,6 +161,12 @@ public class FloatingService extends Service {
                 currentTextSize += 2f;
                 editNotes.setTextSize(currentTextSize);
             }
+        });
+        
+        // 关闭按钮
+        closeBtn.setOnClickListener(v -> {
+            // 停止服务并关闭悬浮窗
+            stopSelf();
         });
     }
 

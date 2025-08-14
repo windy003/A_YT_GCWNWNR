@@ -174,9 +174,23 @@ public class YouTubeWindowManager {
     }
     
     /**
-     * 发送左方向键到YouTube（5秒倒退）
+     * 发送左方向键到YouTube（10秒倒退）或双击手势（5秒倒退）
      */
     public boolean sendLeftArrowToYouTube() {
+        Log.d(TAG, "尝试发送5秒回退指令到YouTube");
+        
+        // 方法1: 优先尝试双击手势（5秒回退）
+        MediaControlAccessibilityService accessibilityService = 
+            MediaControlAccessibilityService.getInstance();
+        if (accessibilityService != null && accessibilityService.isYouTubeInForeground()) {
+            if (accessibilityService.performLeftDoubleClick()) {
+                Log.d(TAG, "双击手势发送成功（5秒回退）");
+                return true;
+            }
+        }
+        
+        // 方法2: 备用方案 - 使用左方向键（10秒回退）
+        Log.d(TAG, "双击手势失败，使用左方向键（10秒回退）");
         return sendKeyToYouTube(KeyEvent.KEYCODE_DPAD_LEFT);
     }
     

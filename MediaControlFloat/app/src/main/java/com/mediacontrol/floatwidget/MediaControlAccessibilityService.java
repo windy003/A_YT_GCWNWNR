@@ -56,7 +56,7 @@ public class MediaControlAccessibilityService extends AccessibilityService {
     }
 
     /**
-     * 发送左方向键到YouTube应用
+     * 发送左方向键到YouTube应用进行10秒回退
      */
     public boolean sendLeftArrowToYouTube() {
         try {
@@ -348,6 +348,62 @@ public class MediaControlAccessibilityService extends AccessibilityService {
             return sendPlayPauseToYouTube();
         }
         
+        return false;
+    }
+
+    /**
+     * 执行左侧双击手势（5秒回退）
+     */
+    public boolean performLeftDoubleClick() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                AccessibilityNodeInfo rootNode = getRootInActiveWindow();
+                if (rootNode != null) {
+                    Rect bounds = new Rect();
+                    rootNode.getBoundsInScreen(bounds);
+                    
+                    // 在屏幕左侧1/3位置执行双击（YouTube的双击回退功能）
+                    int leftX = bounds.left + (bounds.width() / 3);
+                    int centerY = bounds.centerY();
+                    
+                    Log.d("AccessibilityService", "执行双击手势在位置: (" + leftX + ", " + centerY + ")");
+                    return performDoubleClickAt(leftX, centerY);
+                }
+            } catch (Exception e) {
+                Log.e("AccessibilityService", "双击手势执行失败", e);
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 在指定位置执行双击手势
+     */
+    private boolean performDoubleClickAt(int x, int y) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                // 创建双击路径
+                Path clickPath = new Path();
+                clickPath.moveTo(x, y);
+                
+                // 第一次点击
+                GestureDescription.StrokeDescription firstClick = 
+                    new GestureDescription.StrokeDescription(clickPath, 0, 100);
+                
+                // 第二次点击（间隔300ms）
+                GestureDescription.StrokeDescription secondClick = 
+                    new GestureDescription.StrokeDescription(clickPath, 300, 100);
+                
+                GestureDescription gestureDescription = new GestureDescription.Builder()
+                    .addStroke(firstClick)
+                    .addStroke(secondClick)
+                    .build();
+                
+                return dispatchGesture(gestureDescription, null, null);
+            } catch (Exception e) {
+                Log.e("AccessibilityService", "执行双击手势时发生错误", e);
+            }
+        }
         return false;
     }
 }

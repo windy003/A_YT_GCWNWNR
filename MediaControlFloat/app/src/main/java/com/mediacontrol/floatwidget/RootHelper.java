@@ -219,21 +219,21 @@ public class RootHelper {
     }
     
     /**
-     * 发送YouTube专用的左方向键（确保焦点正确）
+     * 发送YouTube专用的左方向键（10秒回退）
      */
     public static boolean sendYouTubeLeftKey() {
-        Log.d(TAG, "发送左方向键21到YouTube");
+        Log.d(TAG, "发送左方向键到YouTube进行10秒回退");
         
-        // 直接发送左方向键（按键码21）
+        // 发送左方向键（按键码21）进行10秒回退
         String[] commands = {
             "input keyevent 21"
         };
         
         boolean success = executeRootCommand(commands);
         if (success) {
-            Log.d(TAG, "左方向键21发送成功");
+            Log.d(TAG, "左方向键发送成功，10秒回退");
         } else {
-            Log.d(TAG, "左方向键21发送失败");
+            Log.d(TAG, "左方向键发送失败");
         }
         
         return success;

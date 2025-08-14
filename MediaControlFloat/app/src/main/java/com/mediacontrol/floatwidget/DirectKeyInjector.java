@@ -16,7 +16,7 @@ public class DirectKeyInjector {
     }
 
     /**
-     * 发送左方向键到当前前台应用
+     * 发送左方向键到YouTube进行10秒回退
      */
     public boolean sendLeftArrowKey() {
         // 尝试多种方法，按优先级排序
