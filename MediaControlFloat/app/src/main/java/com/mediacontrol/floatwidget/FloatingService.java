@@ -32,6 +32,9 @@ public class FloatingService extends Service {
     
     // UI 组件
     private EditText editNotes;
+    private Button fontSmallerBtn;
+    private Button fontLargerBtn;
+    private float currentTextSize = 18f; // 默认字体大小
 
     @Override
     public void onCreate() {
@@ -91,6 +94,8 @@ public class FloatingService extends Service {
         ImageButton playPauseBtn = floatingView.findViewById(R.id.btn_play_pause);
         ImageButton rewindBtn = floatingView.findViewById(R.id.btn_rewind);
         editNotes = floatingView.findViewById(R.id.edit_notes);
+        fontSmallerBtn = floatingView.findViewById(R.id.btn_font_smaller);
+        fontLargerBtn = floatingView.findViewById(R.id.btn_font_larger);
 
         playPauseBtn.setOnClickListener(v -> {
             // 播放/暂停使用标准媒体键，通常不需要特殊处理
@@ -139,6 +144,21 @@ public class FloatingService extends Service {
         // 点击EditText时确保能获得焦点
         editNotes.setOnClickListener(v -> {
             editNotes.requestFocus();
+        });
+        
+        // 字体大小调整按钮
+        fontSmallerBtn.setOnClickListener(v -> {
+            if (currentTextSize > 10f) {
+                currentTextSize -= 2f;
+                editNotes.setTextSize(currentTextSize);
+            }
+        });
+        
+        fontLargerBtn.setOnClickListener(v -> {
+            if (currentTextSize < 30f) {
+                currentTextSize += 2f;
+                editNotes.setTextSize(currentTextSize);
+            }
         });
     }
 
