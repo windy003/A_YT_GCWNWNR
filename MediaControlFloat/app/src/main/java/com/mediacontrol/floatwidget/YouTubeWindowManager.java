@@ -119,26 +119,7 @@ public class YouTubeWindowManager {
         // 直接发送按键事件，不强制切换应用（避免干扰用户）
         boolean success = false;
         
-        // 方法1: 使用Root权限（最可靠）
-        try {
-            if (RootHelper.isRootGranted()) {
-                // 如果是左方向键，使用专门的YouTube方法
-                if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
-                    success = RootHelper.sendYouTubeLeftKey();
-                } else {
-                    success = RootHelper.sendKeyEvent(keyCode);
-                }
-                
-                if (success) {
-                    Log.d(TAG, "Successfully sent key via Root");
-                    return true;
-                }
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Root method failed: " + e.getMessage());
-        }
-        
-        // 方法2: 使用AccessibilityService
+        // 方法1: 使用AccessibilityService
         try {
             MediaControlAccessibilityService accessibilityService = 
                 MediaControlAccessibilityService.getInstance();
@@ -154,7 +135,7 @@ public class YouTubeWindowManager {
             Log.w(TAG, "AccessibilityService method failed: " + e.getMessage());
         }
         
-        // 方法3: 直接按键注入
+        // 方法2: 直接按键注入
         try {
             DirectKeyInjector injector = new DirectKeyInjector(context);
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {

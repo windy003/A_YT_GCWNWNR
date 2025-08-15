@@ -37,15 +37,6 @@
         android:layout_marginBottom="8dp"
         android:text="授予无障碍权限" />
 
-    <Button
-        android:id="@+id/btn_grant_root"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:text="获取Root权限（推荐）"
-        android:background="@android:color/holo_orange_light"
-        android:textColor="@android:color/white"
-        android:visibility="visible" />
 
     <Button
         android:id="@+id/btn_start_service"
@@ -58,7 +49,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="使用说明：\n• 播放/暂停按钮：控制媒体播放\n• 后退按钮：后退5秒（左方向键）\n• 拖拽悬浮窗可移动位置\n\n🔥 Root权限优势：\n• 100%按键成功率，无需额外设置\n• 直接向系统发送按键，兼容性最佳\n• 无Root设备请使用无障碍权限"
+        android:text="使用说明：\n• 播放/暂停按钮：控制媒体播放\n• 后退按钮：后退5秒（左方向键）\n• 拖拽悬浮窗可移动位置\n\n需要授予无障碍权限以正常工作"
         android:textSize="14sp"
         android:gravity="center" />
 

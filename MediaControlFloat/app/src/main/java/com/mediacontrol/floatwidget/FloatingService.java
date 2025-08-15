@@ -262,7 +262,7 @@ public class FloatingService extends Service {
     }
     
     /**
-     * 发送媒体播放/暂停按键（无需root权限）
+     * 发送媒体播放/暂停按键
      */
     private boolean sendMediaPlayPauseKey() {
         try {

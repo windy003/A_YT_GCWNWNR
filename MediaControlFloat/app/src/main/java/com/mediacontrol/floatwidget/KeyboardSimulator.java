@@ -30,11 +30,6 @@ public class KeyboardSimulator {
             success = sendKeyViaBroadcast(37); // 左箭头键的码值
         }
         
-        // 方法3: 通过Shell命令发送 (需要ROOT权限)
-        if (!success) {
-            success = sendKeyViaShell(KeyEvent.KEYCODE_DPAD_LEFT);
-        }
-        
         // 方法4: 作为后备方案，发送媒体控制键
         if (!success) {
             sendMediaKeyViaBroadcast(KeyEvent.KEYCODE_MEDIA_SKIP_BACKWARD);
@@ -88,26 +83,6 @@ public class KeyboardSimulator {
         }
     }
 
-    /**
-     * 通过Shell命令发送按键 (需要ROOT权限)
-     */
-    private boolean sendKeyViaShell(int keyCode) {
-        try {
-            // 使用input命令发送按键事件
-            Process process = Runtime.getRuntime().exec("su");
-            DataOutputStream os = new DataOutputStream(process.getOutputStream());
-            os.writeBytes("input keyevent " + keyCode + "\n");
-            os.writeBytes("exit\n");
-            os.flush();
-            os.close();
-            
-            int exitCode = process.waitFor();
-            return exitCode == 0;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
 
     /**
      * 发送媒体控制键作为备选方案

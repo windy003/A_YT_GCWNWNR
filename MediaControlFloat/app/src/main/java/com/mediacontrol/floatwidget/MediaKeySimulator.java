@@ -63,7 +63,7 @@ public class MediaKeySimulator {
             // 尝试通过广播发送按键事件
             sendKeyIntent(keyCode);
             
-            // 方法2: 尝试通过shell命令发送按键（需要root权限）
+            // 方法2: 尝试通过shell命令发送按键
             sendKeyViaShell(keyCode);
             
         } catch (Exception e) {

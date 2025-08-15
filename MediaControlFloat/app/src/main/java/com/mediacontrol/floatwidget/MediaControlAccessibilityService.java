@@ -151,23 +151,7 @@ public class MediaControlAccessibilityService extends AccessibilityService {
      */
     private boolean sendKeyViaShell(int keyCode) {
         try {
-            // 方法1: 尝试使用su权限
-            try {
-                Process suProcess = Runtime.getRuntime().exec("su");
-                DataOutputStream os = new DataOutputStream(suProcess.getOutputStream());
-                os.writeBytes("input keyevent " + keyCode + "\n");
-                os.writeBytes("exit\n");
-                os.flush();
-                os.close();
-                int exitCode = suProcess.waitFor();
-                if (exitCode == 0) {
-                    return true;
-                }
-            } catch (Exception e) {
-                // Root权限不可用，继续尝试其他方法
-            }
-            
-            // 方法2: 直接执行input命令（某些设备可能支持）
+            // 方法1: 直接执行input命令（某些设备可能支持）
             Process process = Runtime.getRuntime().exec("input keyevent " + keyCode);
             int exitCode = process.waitFor();
             return exitCode == 0;
