@@ -60,6 +60,7 @@
 
     <!-- 简单的文本输入框 -->
     <FrameLayout
+        android:id="@+id/edit_text_container"
         android:layout_width="380dp"
         android:layout_height="220dp"
         android:layout_marginTop="8dp"

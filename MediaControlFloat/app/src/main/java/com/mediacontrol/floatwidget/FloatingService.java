@@ -7,6 +7,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
@@ -17,6 +18,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.Toast;
@@ -41,6 +43,7 @@ public class FloatingService extends Service {
     
     // UI 组件
     private EditText editNotes;
+    private FrameLayout editTextContainer;
     private Button closeBtn;
     private Button unfocusBtn;
     private ImageButton playPauseBtn;
@@ -102,12 +105,19 @@ public class FloatingService extends Service {
 
         setupButtons();
         setupDragListener();
+        
+        // 应用系统主题样式
+        applySystemTheme();
+        
+        // 设置配置变更监听器
+        setupConfigurationListener();
     }
 
     private void setupButtons() {
         playPauseBtn = floatingView.findViewById(R.id.btn_play_pause);
         ImageButton rewindBtn = floatingView.findViewById(R.id.btn_rewind);
         editNotes = floatingView.findViewById(R.id.edit_notes);
+        editTextContainer = floatingView.findViewById(R.id.edit_text_container);
         unfocusBtn = floatingView.findViewById(R.id.btn_unfocus);
         closeBtn = floatingView.findViewById(R.id.btn_close);
         
@@ -865,6 +875,104 @@ public class FloatingService extends Service {
         stopPlaybackStatusMonitoring();
         if (floatingView != null) {
             windowManager.removeView(floatingView);
+        }
+    }
+
+    /**
+     * 设置配置变更监听器
+     */
+    private void setupConfigurationListener() {
+        // 创建配置变更检查器，定期检查主题变化
+        handler.post(new Runnable() {
+            private boolean lastDarkTheme = isSystemDarkTheme();
+            
+            @Override
+            public void run() {
+                try {
+                    boolean currentDarkTheme = isSystemDarkTheme();
+                    if (currentDarkTheme != lastDarkTheme) {
+                        android.util.Log.d("FloatingService", "检测到主题变化: " + 
+                            (lastDarkTheme ? "深色" : "浅色") + " -> " + 
+                            (currentDarkTheme ? "深色" : "浅色"));
+                        lastDarkTheme = currentDarkTheme;
+                        applySystemTheme();
+                    }
+                } catch (Exception e) {
+                    android.util.Log.e("FloatingService", "配置变更检查时出错", e);
+                }
+                
+                // 每2秒检查一次主题变化
+                handler.postDelayed(this, 2000);
+            }
+        });
+    }
+    
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        android.util.Log.d("FloatingService", "配置变更回调触发");
+        
+        // 延迟应用主题，确保系统配置已更新
+        handler.postDelayed(() -> {
+            applySystemTheme();
+        }, 100);
+    }
+    
+    /**
+     * 应用系统主题样式到文本输入框
+     */
+    private void applySystemTheme() {
+        if (editNotes == null || editTextContainer == null) {
+            android.util.Log.w("FloatingService", "EditText 或容器为空，跳过主题应用");
+            return;
+        }
+        
+        try {
+            // 检测系统是否为深色主题
+            boolean isDarkTheme = isSystemDarkTheme();
+            android.util.Log.d("FloatingService", "检测到系统主题: " + (isDarkTheme ? "深色" : "浅色"));
+            
+            if (isDarkTheme) {
+                // 深色主题：黑底白字
+                editTextContainer.setBackgroundColor(0xFF1E1E1E); // 深灰色背景
+                editNotes.setTextColor(0xFFFFFFFF); // 白色文字
+                editNotes.setHintTextColor(0xFF888888); // 灰色提示文字
+                android.util.Log.d("FloatingService", "已应用深色主题样式");
+            } else {
+                // 浅色主题：白底黑字  
+                editTextContainer.setBackgroundColor(0xFFFFFFFF); // 白色背景
+                editNotes.setTextColor(0xFF000000); // 黑色文字
+                editNotes.setHintTextColor(0xFF666666); // 深灰色提示文字
+                android.util.Log.d("FloatingService", "已应用浅色主题样式");
+            }
+        } catch (Exception e) {
+            android.util.Log.e("FloatingService", "应用主题样式时出错", e);
+        }
+    }
+    
+    /**
+     * 检测系统是否为深色主题
+     */
+    private boolean isSystemDarkTheme() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Android 11+ 使用 isNightModeActive
+                return ((android.app.UiModeManager) getSystemService(Context.UI_MODE_SERVICE))
+                    .getNightMode() == android.app.UiModeManager.MODE_NIGHT_YES;
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Android 10 使用 Configuration
+                int nightModeFlags = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+                return nightModeFlags == Configuration.UI_MODE_NIGHT_YES;
+            } else {
+                // Android 9 及以下，检查系统设置
+                return android.provider.Settings.Secure.getInt(
+                    getContentResolver(),
+                    "ui_night_mode", 0) == 2;
+            }
+        } catch (Exception e) {
+            android.util.Log.e("FloatingService", "检测系统主题时出错", e);
+            // 出错时默认返回浅色主题
+            return false;
         }
     }
 
