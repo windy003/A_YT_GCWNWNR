@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
@@ -30,6 +31,8 @@ import androidx.core.app.NotificationCompat;
 
 public class FloatingService extends Service {
     private static final String CHANNEL_ID = "FloatingServiceChannel";
+    private static final String PREFS_NAME = "FloatingWidgetPrefs";
+    private static final String NOTES_KEY = "saved_notes";
     private WindowManager windowManager;
     private View floatingView;
     private WindowManager.LayoutParams params;
@@ -45,6 +48,7 @@ public class FloatingService extends Service {
     private boolean isPlaying = false; // 播放状态，初始为暂停状态（显示播放按钮）
     private Handler handler = new Handler(Looper.getMainLooper());
     private Runnable playbackStatusChecker;
+    private Runnable saveNotesRunnable;
 
     @Override
     public void onCreate() {
@@ -109,6 +113,9 @@ public class FloatingService extends Service {
         
         // 初始化播放按钮状态
         updatePlayPauseButton();
+        
+        // 加载保存的文本内容
+        loadSavedNotes();
         
         // 设置EditText换行属性
         setupEditTextWordWrap();
@@ -256,6 +263,8 @@ public class FloatingService extends Service {
         
         // 关闭按钮
         closeBtn.setOnClickListener(v -> {
+            // 保存文本内容
+            saveNotes();
             // 停止服务并关闭悬浮窗
             stopSelf();
         });
@@ -375,6 +384,9 @@ public class FloatingService extends Service {
                 
                 @Override
                 public void afterTextChanged(android.text.Editable s) {
+                    // 延迟保存文本内容（避免频繁保存）
+                    scheduleAutoSave();
+                    
                     // 根据当前字体大小动态计算每行字符数限制
                     int maxCharsPerLine = calculateMaxCharsPerLine();
                     
@@ -631,9 +643,66 @@ public class FloatingService extends Service {
         }
     }
 
+    /**
+     * 延迟自动保存（避免频繁保存）
+     */
+    private void scheduleAutoSave() {
+        if (handler != null) {
+            // 取消之前的保存任务
+            if (saveNotesRunnable != null) {
+                handler.removeCallbacks(saveNotesRunnable);
+            }
+            
+            // 创建新的保存任务
+            saveNotesRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    saveNotes();
+                }
+            };
+            
+            // 延迟1秒后保存（用户停止输入1秒后自动保存）
+            handler.postDelayed(saveNotesRunnable, 1000);
+        }
+    }
+
+    /**
+     * 保存笔记文本到SharedPreferences
+     */
+    private void saveNotes() {
+        if (editNotes != null) {
+            String notes = editNotes.getText().toString();
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString(NOTES_KEY, notes);
+            editor.apply();
+            android.util.Log.d("FloatingService", "已保存笔记，长度: " + notes.length());
+        }
+    }
+    
+    /**
+     * 从SharedPreferences加载笔记文本
+     */
+    private void loadSavedNotes() {
+        if (editNotes != null) {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            String savedNotes = prefs.getString(NOTES_KEY, "");
+            editNotes.setText(savedNotes);
+            android.util.Log.d("FloatingService", "已加载笔记，长度: " + savedNotes.length());
+        }
+    }
+
     @Override
     public void onDestroy() {
         super.onDestroy();
+        // 在销毁时保存文本内容
+        saveNotes();
+        
+        // 清理回调
+        if (handler != null && saveNotesRunnable != null) {
+            handler.removeCallbacks(saveNotesRunnable);
+        }
+        
         stopPlaybackStatusMonitoring();
         if (floatingView != null) {
             windowManager.removeView(floatingView);
