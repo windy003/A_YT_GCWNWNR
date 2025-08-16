@@ -33,6 +33,8 @@ public class FloatingService extends Service {
     private static final String CHANNEL_ID = "FloatingServiceChannel";
     private static final String PREFS_NAME = "FloatingWidgetPrefs";
     private static final String NOTES_KEY = "saved_notes";
+    private static final String POSITION_X_KEY = "floating_position_x";
+    private static final String POSITION_Y_KEY = "floating_position_y";
     private WindowManager windowManager;
     private View floatingView;
     private WindowManager.LayoutParams params;
@@ -90,8 +92,11 @@ public class FloatingService extends Service {
                 PixelFormat.TRANSLUCENT);
 
         params.gravity = Gravity.TOP | Gravity.START;
-        params.x = 0;
-        params.y = 100;
+        
+        // 恢复保存的位置，如果没有保存的位置则使用默认值
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        params.x = prefs.getInt(POSITION_X_KEY, 0);
+        params.y = prefs.getInt(POSITION_Y_KEY, 100);
 
         windowManager.addView(floatingView, params);
 
@@ -296,6 +301,8 @@ public class FloatingService extends Service {
         closeBtn.setOnClickListener(v -> {
             // 保存文本内容
             saveNotes();
+            // 保存当前悬浮窗位置
+            saveFloatingPosition();
             // 停止服务并关闭悬浮窗
             stopSelf();
         });
@@ -828,12 +835,27 @@ public class FloatingService extends Service {
             android.util.Log.d("FloatingService", "已加载笔记，长度: " + savedNotes.length());
         }
     }
+    
+    /**
+     * 保存悬浮窗位置到SharedPreferences
+     */
+    private void saveFloatingPosition() {
+        if (params != null) {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putInt(POSITION_X_KEY, params.x);
+            editor.putInt(POSITION_Y_KEY, params.y);
+            editor.apply();
+            android.util.Log.d("FloatingService", "已保存悬浮窗位置: x=" + params.x + ", y=" + params.y);
+        }
+    }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        // 在销毁时保存文本内容
+        // 在销毁时保存文本内容和悬浮窗位置
         saveNotes();
+        saveFloatingPosition();
         
         // 清理回调
         if (handler != null && saveNotesRunnable != null) {
