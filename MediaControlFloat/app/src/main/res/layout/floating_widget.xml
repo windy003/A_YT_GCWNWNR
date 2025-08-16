@@ -32,25 +32,6 @@
             android:scaleType="centerInside"
             android:src="@drawable/ic_rewind" />
 
-        <Button
-            android:id="@+id/btn_font_smaller"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:background="@drawable/button_background"
-            android:text="A-"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/btn_font_larger"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:background="@drawable/button_background"
-            android:text="A+"
-            android:textSize="12sp"
-            android:textStyle="bold" />
 
         <Button
             android:id="@+id/btn_unfocus"
@@ -79,8 +60,8 @@
 
     <!-- 简单的文本输入框 -->
     <FrameLayout
-        android:layout_width="500dp"
-        android:layout_height="300dp"
+        android:layout_width="380dp"
+        android:layout_height="220dp"
         android:layout_marginTop="8dp"
         android:background="@android:color/white">
         
@@ -89,13 +70,17 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_margin="4dp"
-            android:padding="4dp"
+            android:padding="6dp"
             android:gravity="top|start"
             android:hint="记录笔记..."
-            android:textSize="18sp"
+            android:textSize="14sp"
             android:background="@android:color/transparent"
-            android:inputType="textMultiLine"
-            android:scrollbars="vertical" />
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:scrollbars="vertical"
+            android:maxLines="15"
+            android:lineSpacingExtra="1dp"
+            android:singleLine="false"
+            android:maxWidth="368dp" />
     </FrameLayout>
 
 </LinearLayout>
