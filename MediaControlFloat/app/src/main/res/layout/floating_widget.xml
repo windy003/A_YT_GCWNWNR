@@ -94,19 +94,8 @@
             android:hint="记录笔记..."
             android:textSize="18sp"
             android:background="@android:color/transparent"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
-            android:inputType="textMultiLine|textCapSentences|textNoSuggestions"
-            android:scrollHorizontally="false"
-            android:singleLine="false"
-            android:maxLines="999"
-            android:scrollbars="vertical"
-            android:breakStrategy="balanced"
-            android:hyphenationFrequency="none"
-            android:overScrollMode="always"
-            android:scrollbarStyle="insideInset"
-            android:textAlignment="viewStart"
-            android:layout_gravity="start|top" />
+            android:inputType="textMultiLine"
+            android:scrollbars="vertical" />
     </FrameLayout>
 
 </LinearLayout>
