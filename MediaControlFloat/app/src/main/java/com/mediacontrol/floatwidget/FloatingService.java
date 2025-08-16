@@ -111,7 +111,8 @@ public class FloatingService extends Service {
         unfocusBtn = floatingView.findViewById(R.id.btn_unfocus);
         closeBtn = floatingView.findViewById(R.id.btn_close);
         
-        // 初始化播放按钮状态
+        // 初始化播放按钮状态 - 先同步真实状态
+        syncPlaybackStatus();
         updatePlayPauseButton();
         
         // 加载保存的文本内容
@@ -126,8 +127,10 @@ public class FloatingService extends Service {
         // 添加长按功能来手动同步状态
         playPauseBtn.setOnLongClickListener(v -> {
             android.util.Log.d("FloatingService", "播放/暂停按钮长按 - 手动同步状态");
-            checkPlaybackStatus();
-            Toast.makeText(this, "已同步播放状态", Toast.LENGTH_SHORT).show();
+            syncPlaybackStatus();
+            updatePlayPauseButton();
+            String statusText = isPlaying ? "正在播放 (显示暂停图标)" : "已暂停 (显示播放图标)";
+            Toast.makeText(this, "状态已同步：" + statusText, Toast.LENGTH_LONG).show();
             return true;
         });
         
@@ -628,21 +631,22 @@ public class FloatingService extends Service {
     
     /**
      * 更新播放/暂停按钮的图标状态
-     * 如果正在播放，显示暂停图标（点击可暂停）
-     * 如果已暂停，显示播放图标（点击可播放）
+     * 按钮显示的是"点击后的动作"：
+     * - 正在播放时，显示暂停图标（表示点击后会暂停）
+     * - 已暂停时，显示播放图标（表示点击后会播放）
      */
     private void updatePlayPauseButton() {
         if (playPauseBtn != null) {
             if (isPlaying) {
-                // 正在播放时，显示暂停图标
+                // 正在播放时，显示暂停图标（点击后会暂停）
                 playPauseBtn.setImageResource(R.drawable.ic_pause);
                 playPauseBtn.setContentDescription("暂停");
-                android.util.Log.d("FloatingService", "更新按钮图标为：暂停图标（当前播放中）");
+                android.util.Log.d("FloatingService", "✓ 正在播放 → 显示暂停图标 (点击后暂停)");
             } else {
-                // 已暂停时，显示播放图标
+                // 已暂停时，显示播放图标（点击后会播放）
                 playPauseBtn.setImageResource(R.drawable.ic_play);
                 playPauseBtn.setContentDescription("播放");
-                android.util.Log.d("FloatingService", "更新按钮图标为：播放图标（当前暂停）");
+                android.util.Log.d("FloatingService", "⏸ 已暂停 → 显示播放图标 (点击后播放)");
             }
         }
     }
@@ -673,7 +677,29 @@ public class FloatingService extends Service {
             if (currentPlayingState != isPlaying) {
                 isPlaying = currentPlayingState;
                 updatePlayPauseButton();
+                android.util.Log.d("FloatingService", "播放状态已同步: " + (isPlaying ? "播放中" : "暂停"));
             }
+        }
+    }
+    
+    /**
+     * 同步播放状态（初始化时调用）
+     */
+    private void syncPlaybackStatus() {
+        try {
+            MediaControlAccessibilityService accessibilityService = 
+                MediaControlAccessibilityService.getInstance();
+            if (accessibilityService != null && accessibilityService.isYouTubeInForeground()) {
+                isPlaying = accessibilityService.isYouTubePlaying();
+                android.util.Log.d("FloatingService", "初始化播放状态: " + (isPlaying ? "播放中" : "暂停"));
+            } else {
+                // 如果无法检测到YouTube或无障碍服务不可用，默认为暂停状态
+                isPlaying = false;
+                android.util.Log.d("FloatingService", "无法检测播放状态，设置为默认暂停状态");
+            }
+        } catch (Exception e) {
+            isPlaying = false;
+            android.util.Log.e("FloatingService", "同步播放状态时出错，设置为暂停状态", e);
         }
     }
     
