@@ -140,6 +140,9 @@ public class FloatingService extends Service {
             
             android.util.Log.d("FloatingService", "操作前状态 - 焦点: " + hadEditTextFocus + ", 键盘: " + wasKeyboardVisible);
             
+            // 临时设置悬浮窗为不可触摸，确保不会干扰媒体按键传递
+            makeFloatingWindowNonTouchable();
+            
             // 播放/暂停使用媒体按键API
             new Thread(() -> {
                 try {
@@ -149,11 +152,19 @@ public class FloatingService extends Service {
                         Thread.sleep(100); // 短暂等待焦点切换
                     }
                     
+                    // 短暂延迟确保窗口属性更新完成
+                    Thread.sleep(150);
+                    
                     // 使用媒体按键API发送播放/暂停命令
                     boolean success = sendMediaPlayPauseKey();
                     
+                    // 延迟后恢复悬浮窗状态
+                    Thread.sleep(200);
+                    
                     // 在主线程更新UI和恢复状态
                     handler.post(() -> {
+                        restoreFloatingWindowTouchable();
+                        
                         if (success) {
                             // 直接切换状态
                             isPlaying = !isPlaying;
@@ -170,7 +181,10 @@ public class FloatingService extends Service {
                     android.util.Log.e("FloatingService", "媒体按键执行异常", e);
                     
                     // 异常时也要恢复状态
-                    handler.post(() -> restoreInputState(hadEditTextFocus, wasKeyboardVisible));
+                    handler.post(() -> {
+                        restoreFloatingWindowTouchable();
+                        restoreInputState(hadEditTextFocus, wasKeyboardVisible);
+                    });
                 }
             }).start();
         });
@@ -221,28 +235,31 @@ public class FloatingService extends Service {
             // 临时清除焦点，让YouTube获得焦点
             editNotes.clearFocus();
             
-            // 临时设置悬浮窗为不可聚焦，让YouTube获得系统焦点
-            params.flags = params.flags | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-            windowManager.updateViewLayout(floatingView, params);
+            // 临时设置悬浮窗为完全不可触摸，实现点击穿透
+            makeFloatingWindowNonTouchable();
             
             // 在后台线程发送5秒回退指令
             new Thread(() -> {
                 try {
-                    // 短暂延迟确保焦点切换完成
-                    Thread.sleep(150);
+                    // 短暂延迟确保窗口属性更新完成
+                    Thread.sleep(200);
                     // 执行5秒回退
                     perform5SecondRewind();
                     
-                    // 延迟后恢复输入状态
-                    Thread.sleep(200);
+                    // 延迟后恢复输入状态和触摸属性
+                    Thread.sleep(300);
                     handler.post(() -> {
+                        restoreFloatingWindowTouchable();
                         restoreInputState(hadEditTextFocus, wasKeyboardVisible);
-                        android.util.Log.d("FloatingService", "回退操作完成，输入状态已恢复");
+                        android.util.Log.d("FloatingService", "回退操作完成，悬浮窗状态已恢复");
                     });
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     // 异常时也要恢复状态
-                    handler.post(() -> restoreInputState(hadEditTextFocus, wasKeyboardVisible));
+                    handler.post(() -> {
+                        restoreFloatingWindowTouchable();
+                        restoreInputState(hadEditTextFocus, wasKeyboardVisible);
+                    });
                 }
             }).start();
         });
@@ -563,6 +580,49 @@ public class FloatingService extends Service {
             
         } catch (Exception e) {
             android.util.Log.e("FloatingService", "恢复输入状态时出错", e);
+        }
+    }
+    
+    /**
+     * 临时设置悬浮窗为不可触摸，实现点击穿透
+     */
+    private void makeFloatingWindowNonTouchable() {
+        try {
+            android.util.Log.d("FloatingService", "设置悬浮窗为不可触摸状态");
+            
+            // 添加 FLAG_NOT_TOUCHABLE 标志，使悬浮窗完全透明于触摸事件
+            params.flags = params.flags | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+            params.flags = params.flags | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+            
+            windowManager.updateViewLayout(floatingView, params);
+            
+            android.util.Log.d("FloatingService", "悬浮窗已设置为点击穿透模式");
+        } catch (Exception e) {
+            android.util.Log.e("FloatingService", "设置悬浮窗不可触摸时出错", e);
+        }
+    }
+    
+    /**
+     * 恢复悬浮窗的正常触摸功能
+     */
+    private void restoreFloatingWindowTouchable() {
+        try {
+            android.util.Log.d("FloatingService", "恢复悬浮窗触摸功能");
+            
+            // 移除 FLAG_NOT_TOUCHABLE 标志，恢复正常触摸
+            params.flags = params.flags & ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+            // 保持 FLAG_NOT_FOCUSABLE，除非 EditText 需要焦点
+            if (!editNotes.hasFocus()) {
+                params.flags = params.flags | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+            } else {
+                params.flags = params.flags & ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+            }
+            
+            windowManager.updateViewLayout(floatingView, params);
+            
+            android.util.Log.d("FloatingService", "悬浮窗触摸功能已恢复");
+        } catch (Exception e) {
+            android.util.Log.e("FloatingService", "恢复悬浮窗触摸功能时出错", e);
         }
     }
     

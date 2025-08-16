@@ -1,3 +1,6 @@
-.*
-!.gitignore
+MediaControlFloat/.claude
+MediaControlFloat/.gradle
+MediaControlFloat/.idea
+
 MediaControlFloat/app/build
+
