@@ -175,6 +175,40 @@ public class FloatingService extends Service {
             }).start();
         });
         
+        // 为回退按钮添加长按功能，显示服务状态和设置跳转
+        rewindBtn.setOnLongClickListener(v -> {
+            MediaControlAccessibilityService accessibilityService = 
+                MediaControlAccessibilityService.getInstance();
+            
+            if (accessibilityService != null) {
+                boolean isYouTubeActive = accessibilityService.isYouTubeInForeground();
+                String statusMsg = "无障碍服务: ✓ 已启用\nYouTube状态: " + 
+                    (isYouTubeActive ? "✓ 在前台" : "❌ 不在前台");
+                Toast.makeText(this, statusMsg, Toast.LENGTH_LONG).show();
+            } else {
+                // 无障碍服务未启用，提供跳转到设置
+                Toast.makeText(this, "无障碍服务未启用\n即将跳转到设置页面", Toast.LENGTH_LONG).show();
+                
+                // 延迟跳转到无障碍设置
+                handler.postDelayed(() -> {
+                    try {
+                        Intent intent = new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
+                        
+                        // 提示用户操作
+                        handler.postDelayed(() -> {
+                            Toast.makeText(this, "请找到并开启\"媒体控制悬浮窗\"无障碍服务", Toast.LENGTH_LONG).show();
+                        }, 1000);
+                    } catch (Exception e) {
+                        android.util.Log.e("FloatingService", "跳转到无障碍设置失败", e);
+                        Toast.makeText(this, "请手动进入设置→无障碍→开启悬浮窗服务", Toast.LENGTH_LONG).show();
+                    }
+                }, 2000);
+            }
+            return true;
+        });
+        
         rewindBtn.setOnClickListener(v -> {
             android.util.Log.d("FloatingService", "回退按钮点击");
             
@@ -340,14 +374,28 @@ public class FloatingService extends Service {
             MediaControlAccessibilityService.getInstance();
         
         if (accessibilityService != null) {
-            boolean success = accessibilityService.performLeftDoubleClick();
-            if (success) {
-                android.util.Log.d("FloatingService", "5秒回退：双击手势成功");
+            android.util.Log.d("FloatingService", "无障碍服务实例获取成功");
+            
+            // 检查YouTube是否在前台
+            boolean isYouTubeActive = accessibilityService.isYouTubeInForeground();
+            android.util.Log.d("FloatingService", "YouTube在前台: " + isYouTubeActive);
+            
+            if (isYouTubeActive) {
+                boolean success = accessibilityService.performLeftDoubleClick();
+                if (success) {
+                    android.util.Log.d("FloatingService", "5秒回退：双击手势成功");
+                    handler.post(() -> Toast.makeText(this, "回退5秒", Toast.LENGTH_SHORT).show());
+                } else {
+                    android.util.Log.w("FloatingService", "5秒回退：双击手势执行失败");
+                    handler.post(() -> Toast.makeText(this, "回退手势失败", Toast.LENGTH_SHORT).show());
+                }
             } else {
-                android.util.Log.d("FloatingService", "5秒回退：双击手势执行失败");
+                android.util.Log.w("FloatingService", "YouTube不在前台，无法执行回退操作");
+                handler.post(() -> Toast.makeText(this, "请先打开YouTube应用", Toast.LENGTH_SHORT).show());
             }
         } else {
-            android.util.Log.e("FloatingService", "无障碍服务不可用");
+            android.util.Log.e("FloatingService", "无障碍服务不可用 - 请在设置中启用悬浮窗无障碍服务");
+            handler.post(() -> Toast.makeText(this, "请在设置中启用悬浮窗无障碍服务", Toast.LENGTH_LONG).show());
         }
     }
     

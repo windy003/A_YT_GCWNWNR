@@ -24,15 +24,24 @@ public class MediaControlAccessibilityService extends AccessibilityService {
     public void onCreate() {
         super.onCreate();
         instance = this;
+        Log.d("AccessibilityService", "MediaControlAccessibilityService onCreate - 服务已创建");
+    }
+    
+    @Override
+    protected void onServiceConnected() {
+        super.onServiceConnected();
+        Log.d("AccessibilityService", "onServiceConnected - 无障碍服务已连接并运行");
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+        Log.d("AccessibilityService", "MediaControlAccessibilityService onDestroy - 服务已销毁");
         instance = null;
     }
 
     public static MediaControlAccessibilityService getInstance() {
+        Log.d("AccessibilityService", "getInstance() called, instance = " + (instance != null ? "not null" : "null"));
         return instance;
     }
 
