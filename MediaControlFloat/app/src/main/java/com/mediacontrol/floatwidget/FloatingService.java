@@ -719,6 +719,8 @@ public class FloatingService extends Service {
             private int initialY;
             private float initialTouchX;
             private float initialTouchY;
+            private boolean isDragging = false;
+            private static final int DRAG_THRESHOLD = 10; // 拖拽阈值，像素
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -733,13 +735,117 @@ public class FloatingService extends Service {
                         initialY = params.y;
                         initialTouchX = event.getRawX();
                         initialTouchY = event.getRawY();
-                        return true;
-                    case MotionEvent.ACTION_UP:
+                        isDragging = false;
                         return true;
                     case MotionEvent.ACTION_MOVE:
-                        params.x = initialX + (int) (event.getRawX() - initialTouchX);
-                        params.y = initialY + (int) (event.getRawY() - initialTouchY);
-                        windowManager.updateViewLayout(floatingView, params);
+                        float deltaX = event.getRawX() - initialTouchX;
+                        float deltaY = event.getRawY() - initialTouchY;
+                        
+                        // 检查是否超过拖拽阈值
+                        if (!isDragging && (Math.abs(deltaX) > DRAG_THRESHOLD || Math.abs(deltaY) > DRAG_THRESHOLD)) {
+                            isDragging = true;
+                        }
+                        
+                        // 如果正在拖拽，更新窗口位置
+                        if (isDragging) {
+                            params.x = initialX + (int) deltaX;
+                            params.y = initialY + (int) deltaY;
+                            windowManager.updateViewLayout(floatingView, params);
+                        }
+                        return isDragging; // 只有在拖拽时才消费事件
+                    case MotionEvent.ACTION_UP:
+                        boolean wasDragging = isDragging;
+                        isDragging = false;
+                        return wasDragging; // 如果进行了拖拽，消费UP事件防止触发点击
+                }
+                return false;
+            }
+        });
+        
+        // 为按钮区域设置特殊的触摸处理，支持拖拽的同时保留点击功能
+        setupButtonDragAndClick();
+    }
+    
+    /**
+     * 为按钮区域设置拖拽和点击功能
+     */
+    private void setupButtonDragAndClick() {
+        // 获取按钮容器（第一个LinearLayout就是按钮容器）
+        LinearLayout buttonContainer = null;
+        View firstChild = ((LinearLayout) floatingView).getChildAt(0);
+        if (firstChild instanceof LinearLayout) {
+            buttonContainer = (LinearLayout) firstChild;
+        }
+        
+        if (buttonContainer != null) {
+            setupDragAndClickForView(buttonContainer);
+        }
+        
+        // 为每个按钮单独设置触摸处理
+        setupDragAndClickForView(playPauseBtn);
+        setupDragAndClickForView(floatingView.findViewById(R.id.btn_rewind));
+        setupDragAndClickForView(fontSmallerBtn);
+        setupDragAndClickForView(fontLargerBtn);
+        setupDragAndClickForView(unfocusBtn);
+        setupDragAndClickForView(closeBtn);
+    }
+    
+    /**
+     * 为指定视图设置拖拽和点击功能
+     */
+    private void setupDragAndClickForView(View view) {
+        if (view == null) return;
+        
+        view.setOnTouchListener(new View.OnTouchListener() {
+            private int initialX;
+            private int initialY;
+            private float initialTouchX;
+            private float initialTouchY;
+            private boolean isDragging = false;
+            private static final int DRAG_THRESHOLD = 15; // 按钮的拖拽阈值稍大一些
+            private long touchStartTime;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        initialX = params.x;
+                        initialY = params.y;
+                        initialTouchX = event.getRawX();
+                        initialTouchY = event.getRawY();
+                        isDragging = false;
+                        touchStartTime = System.currentTimeMillis();
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        float deltaX = event.getRawX() - initialTouchX;
+                        float deltaY = event.getRawY() - initialTouchY;
+                        
+                        // 检查是否超过拖拽阈值
+                        if (!isDragging && (Math.abs(deltaX) > DRAG_THRESHOLD || Math.abs(deltaY) > DRAG_THRESHOLD)) {
+                            isDragging = true;
+                            android.util.Log.d("FloatingService", "按钮开始拖拽: " + v.getClass().getSimpleName());
+                        }
+                        
+                        // 如果正在拖拽，更新窗口位置
+                        if (isDragging) {
+                            params.x = initialX + (int) deltaX;
+                            params.y = initialY + (int) deltaY;
+                            windowManager.updateViewLayout(floatingView, params);
+                        }
+                        return true; // 总是返回true来处理移动事件
+                    case MotionEvent.ACTION_UP:
+                        long touchDuration = System.currentTimeMillis() - touchStartTime;
+                        boolean wasDragging = isDragging;
+                        isDragging = false;
+                        
+                        // 如果没有拖拽且触摸时间较短，则执行点击
+                        if (!wasDragging && touchDuration < 300) {
+                            android.util.Log.d("FloatingService", "按钮点击: " + v.getClass().getSimpleName());
+                            // 延迟执行点击，确保拖拽状态已重置
+                            v.postDelayed(() -> v.performClick(), 50);
+                        } else if (wasDragging) {
+                            android.util.Log.d("FloatingService", "按钮拖拽结束: " + v.getClass().getSimpleName());
+                        }
                         return true;
                 }
                 return false;
