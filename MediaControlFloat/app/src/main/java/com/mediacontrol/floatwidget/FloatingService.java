@@ -88,7 +88,7 @@ public class FloatingService extends Service {
         }
 
         params = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 layoutFlag,
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
